@@ -4,6 +4,7 @@ export interface Habit {
   name: string;
   emoji: string;
   goal: number; // target days per month
+  category?: 'Core' | 'Physical' | 'Mindset' | 'Lifestyle';
 }
 
 export type CompletionData = Record<string, boolean[]>; // habitId -> array of booleans for each day
