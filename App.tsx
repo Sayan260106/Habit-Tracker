@@ -8,20 +8,36 @@ import {
   ChevronLeft, ChevronRight, Plus, Trash2, CheckCircle2, 
   Target, BarChart3, Download, 
   Calendar, TrendingUp, Award, Zap, ArrowUpRight, ArrowDownRight,
-  Sun, Moon, Flame, X, Check, Activity, ShieldAlert
+  Sun, Moon, Flame, X, Check, Activity, ShieldAlert, LogOut, User, Settings
 } from 'lucide-react';
 import { Habit, CompletionData } from './types';
 import { INITIAL_HABITS, MONTHS, DAYS_OF_WEEK } from './constants';
+import Login from './Login'; 
+import SettingsModal from './SettingsModal';
 
 type ViewMode = 'daily' | 'analysis';
 
+interface UserState {
+  email: string;
+  name?: string;
+  avatar?: string;
+}
+
 const App: React.FC = () => {
-  // --- STATE & PERSISTENCE ---
+  // --- AUTHENTICATION STATE ---
+  const [user, setUser] = useState<UserState | null>(() => {
+    const saved = localStorage.getItem('ascend_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  
+  // --- UI STATE ---
   const [view, setView] = useState<ViewMode>('daily');
   const [currentMonthIdx, setCurrentMonthIdx] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('ascend_theme') === 'dark');
+  const [showSettings, setShowSettings] = useState(false);
 
+  // --- HABIT STATE ---
   const [habits, setHabits] = useState<Habit[]>(() => {
     const saved = localStorage.getItem('ascend_habits');
     return saved ? JSON.parse(saved) : INITIAL_HABITS;
@@ -37,12 +53,30 @@ const App: React.FC = () => {
   const [newHabitGoal, setNewHabitGoal] = useState('30');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  // --- PERSISTENCE ---
   useEffect(() => { localStorage.setItem('ascend_habits', JSON.stringify(habits)); }, [habits]);
   useEffect(() => { localStorage.setItem('ascend_completions', JSON.stringify(completions)); }, [completions]);
   useEffect(() => {
     localStorage.setItem('ascend_theme', darkMode ? 'dark' : 'light');
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
+
+  const handleAuth = (email: string, name?: string) => {
+    const userObj = { email, name, avatar: '⚡' };
+    setUser(userObj);
+    localStorage.setItem('ascend_user', JSON.stringify(userObj));
+  };
+
+  const handleUpdateProfile = (data: { email: string; name: string; avatar: string }) => {
+    const updatedUser = { ...user, ...data };
+    setUser(updatedUser);
+    localStorage.setItem('ascend_user', JSON.stringify(updatedUser));
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('ascend_user');
+  };
 
   // --- CALENDAR HELPERS ---
   const daysInMonth = new Date(currentYear, currentMonthIdx + 1, 0).getDate();
@@ -153,8 +187,25 @@ const App: React.FC = () => {
 
   const cardBase = `rounded-2xl border transition-all duration-300 ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`;
 
+  // Render Auth if not authenticated
+  if (!user) {
+    return <Login onAuth={handleAuth} darkMode={darkMode} />;
+  }
+
+  const displayName = user.name || user.email.split('@')[0];
+
   return (
-    <div className={`min-h-screen flex flex-col font-medium ${darkMode ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-800'}`}>
+    <div className={`min-h-screen flex flex-col font-medium transition-colors duration-700 ${darkMode ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-800'}`}>
+      {/* Settings Modal */}
+      {showSettings && (
+        <SettingsModal 
+          user={user} 
+          onClose={() => setShowSettings(false)} 
+          onUpdate={handleUpdateProfile}
+          darkMode={darkMode}
+        />
+      )}
+
       {/* Header */}
       <nav className={`sticky top-0 z-50 border-b backdrop-blur-md px-6 py-4 flex items-center justify-between ${darkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-white/80 border-slate-200'}`}>
         <div className="flex items-center gap-3">
@@ -175,11 +226,21 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setShowSettings(true)}
+            className={`flex items-center gap-3 px-3 py-1.5 rounded-xl border transition-all hover:scale-[1.02] active:scale-95 ${darkMode ? 'border-slate-800 bg-slate-800/50 hover:bg-slate-800' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'}`}
+          >
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white shadow-sm ${aura.bg}`}>
+              {user.avatar || <User size={12} />}
+            </div>
+            <span className="text-[10px] font-bold text-slate-500 uppercase truncate max-w-[100px]">{displayName}</span>
+            <Settings size={12} className="text-slate-400 ml-1" />
+          </button>
           <button onClick={() => setDarkMode(!darkMode)} className={`p-2 rounded-xl transition-colors ${darkMode ? 'bg-slate-800 text-amber-400' : 'bg-slate-100 text-slate-600'}`}>
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <button className="hidden sm:flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-xl text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
-            <Download size={16} /> EXPORT
+          <button onClick={handleLogout} className={`p-2 rounded-xl transition-colors hover:text-rose-500 ${darkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-400'}`}>
+            <LogOut size={20} />
           </button>
         </div>
       </nav>
