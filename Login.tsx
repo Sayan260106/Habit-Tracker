@@ -1,6 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { BarChart3, Lock, Mail, ArrowRight, ShieldCheck, Zap, User, UserPlus, CheckCircle2 } from 'lucide-react';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword
+} from "firebase/auth";
+
+import { auth } from "./firebase";
 
 interface AuthProps {
   onAuth: (identity: string, name?: string) => void;
@@ -28,7 +34,7 @@ const Auth: React.FC<AuthProps> = ({ onAuth, darkMode }) => {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -47,10 +53,38 @@ const Auth: React.FC<AuthProps> = ({ onAuth, darkMode }) => {
     }
 
     // Simulate authentication/registration delay
-    setTimeout(() => {
-      onAuth(identity, !isLogin ? name : undefined);
+    try {
+      if (isLogin) {
+        // LOGIN
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          identity,
+          password
+        );
+
+        onAuth(userCredential.user.email || "");
+      } else {
+        // REGISTER
+        if (password !== confirmPassword) {
+          setError("Passwords do not match");
+          setIsLoading(false);
+          return;
+        }
+
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          identity,
+          password
+        );
+
+        onAuth(userCredential.user.email || "", name);
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
       setIsLoading(false);
-    }, 1200);
+    }
+
   };
 
   const toggleMode = () => {
@@ -90,11 +124,10 @@ const Auth: React.FC<AuthProps> = ({ onAuth, darkMode }) => {
                     placeholder="John Doe"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className={`w-full pl-12 pr-4 py-4 rounded-2xl border outline-none transition-all font-bold text-sm ${
-                      darkMode 
-                      ? 'bg-slate-800/50 border-slate-700 focus:border-emerald-500 text-white' 
+                    className={`w-full pl-12 pr-4 py-4 rounded-2xl border outline-none transition-all font-bold text-sm ${darkMode
+                      ? 'bg-slate-800/50 border-slate-700 focus:border-emerald-500 text-white'
                       : 'bg-slate-50 border-slate-200 focus:border-emerald-500 text-slate-900'
-                    }`}
+                      }`}
                   />
                 </div>
               </div>
@@ -110,11 +143,10 @@ const Auth: React.FC<AuthProps> = ({ onAuth, darkMode }) => {
                   placeholder="agent_007"
                   value={identity}
                   onChange={(e) => setIdentity(e.target.value)}
-                  className={`w-full pl-12 pr-4 py-4 rounded-2xl border outline-none transition-all font-bold text-sm ${
-                    darkMode 
-                    ? 'bg-slate-800/50 border-slate-700 focus:border-emerald-500 text-white' 
+                  className={`w-full pl-12 pr-4 py-4 rounded-2xl border outline-none transition-all font-bold text-sm ${darkMode
+                    ? 'bg-slate-800/50 border-slate-700 focus:border-emerald-500 text-white'
                     : 'bg-slate-50 border-slate-200 focus:border-emerald-500 text-slate-900'
-                  }`}
+                    }`}
                 />
               </div>
             </div>
@@ -129,11 +161,10 @@ const Auth: React.FC<AuthProps> = ({ onAuth, darkMode }) => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`w-full pl-12 pr-4 py-4 rounded-2xl border outline-none transition-all font-bold text-sm ${
-                    darkMode 
-                    ? 'bg-slate-800/50 border-slate-700 focus:border-emerald-500 text-white' 
+                  className={`w-full pl-12 pr-4 py-4 rounded-2xl border outline-none transition-all font-bold text-sm ${darkMode
+                    ? 'bg-slate-800/50 border-slate-700 focus:border-emerald-500 text-white'
                     : 'bg-slate-50 border-slate-200 focus:border-emerald-500 text-slate-900'
-                  }`}
+                    }`}
                 />
               </div>
             </div>
@@ -149,11 +180,10 @@ const Auth: React.FC<AuthProps> = ({ onAuth, darkMode }) => {
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`w-full pl-12 pr-4 py-4 rounded-2xl border outline-none transition-all font-bold text-sm ${
-                      darkMode 
-                      ? 'bg-slate-800/50 border-slate-700 focus:border-emerald-500 text-white' 
+                    className={`w-full pl-12 pr-4 py-4 rounded-2xl border outline-none transition-all font-bold text-sm ${darkMode
+                      ? 'bg-slate-800/50 border-slate-700 focus:border-emerald-500 text-white'
                       : 'bg-slate-50 border-slate-200 focus:border-emerald-500 text-slate-900'
-                    }`}
+                      }`}
                   />
                 </div>
               </div>
@@ -161,7 +191,7 @@ const Auth: React.FC<AuthProps> = ({ onAuth, darkMode }) => {
 
             {isLogin && (
               <div className="flex items-center justify-between px-1">
-                <button 
+                <button
                   type="button"
                   onClick={() => setRememberMe(!rememberMe)}
                   className="flex items-center gap-2 group outline-none"
@@ -184,11 +214,10 @@ const Auth: React.FC<AuthProps> = ({ onAuth, darkMode }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg mt-4 ${
-                darkMode
+              className={`w-full py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg mt-4 ${darkMode
                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/20'
                 : 'bg-slate-900 hover:bg-slate-800 text-white shadow-slate-900/20'
-              }`}
+                }`}
             >
               {isLoading ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -216,7 +245,7 @@ const Auth: React.FC<AuthProps> = ({ onAuth, darkMode }) => {
         <div className="text-center mt-8">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
             {isLogin ? "New operative?" : "Already verified?"}
-            <button 
+            <button
               onClick={toggleMode}
               className="text-emerald-500 hover:underline ml-2 outline-none"
             >

@@ -1,19 +1,23 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AreaChart, Area, Cell, LineChart, Line
 } from 'recharts';
-import { 
-  ChevronLeft, ChevronRight, Plus, Trash2, CheckCircle2, 
-  Target, BarChart3, Download, 
+import {
+  ChevronLeft, ChevronRight, Plus, Trash2, CheckCircle2,
+  Target, BarChart3, Download,
   Calendar, TrendingUp, Award, Zap, ArrowUpRight, ArrowDownRight,
   Sun, Moon, Flame, X, Check, Activity, ShieldAlert, LogOut, User, Settings
 } from 'lucide-react';
 import { Habit, CompletionData } from './types';
 import { INITIAL_HABITS, MONTHS, DAYS_OF_WEEK } from './constants';
-import Login from './Login'; 
 import SettingsModal from './SettingsModal';
+import { signOut } from "firebase/auth";
+import { auth } from "./firebase";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Login from './Login';
+import ProtectedRoute from "./ProtectedRoute";
 
 type ViewMode = 'daily' | 'analysis';
 
@@ -29,7 +33,26 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('ascend_user');
     return saved ? JSON.parse(saved) : null;
   });
-  
+
+  function App() {
+    return (
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <App />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    );
+  }
+
+
   // --- UI STATE ---
   const [view, setView] = useState<ViewMode>('daily');
   const [currentMonthIdx, setCurrentMonthIdx] = useState(new Date().getMonth());
@@ -42,7 +65,7 @@ const App: React.FC = () => {
     const saved = localStorage.getItem('ascend_habits');
     return saved ? JSON.parse(saved) : INITIAL_HABITS;
   });
-  
+
   const [completions, setCompletions] = useState<Record<string, CompletionData>>(() => {
     const saved = localStorage.getItem('ascend_completions');
     return saved ? JSON.parse(saved) : {};
@@ -73,10 +96,12 @@ const App: React.FC = () => {
     localStorage.setItem('ascend_user', JSON.stringify(updatedUser));
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut(auth);
     setUser(null);
-    localStorage.removeItem('ascend_user');
+    localStorage.removeItem("ascend_user");
   };
+
 
   // --- CALENDAR HELPERS ---
   const daysInMonth = new Date(currentYear, currentMonthIdx + 1, 0).getDate();
@@ -198,9 +223,9 @@ const App: React.FC = () => {
     <div className={`min-h-screen flex flex-col font-medium transition-colors duration-700 ${darkMode ? 'bg-slate-950 text-slate-200' : 'bg-slate-50 text-slate-800'}`}>
       {/* Settings Modal */}
       {showSettings && (
-        <SettingsModal 
-          user={user} 
-          onClose={() => setShowSettings(false)} 
+        <SettingsModal
+          user={user}
+          onClose={() => setShowSettings(false)}
           onUpdate={handleUpdateProfile}
           darkMode={darkMode}
         />
@@ -226,7 +251,7 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <button 
+          <button
             onClick={() => setShowSettings(true)}
             className={`flex items-center gap-3 px-3 py-1.5 rounded-xl border transition-all hover:scale-[1.02] active:scale-95 ${darkMode ? 'border-slate-800 bg-slate-800/50 hover:bg-slate-800' : 'border-slate-200 bg-slate-50 hover:bg-slate-100'}`}
           >
@@ -252,9 +277,9 @@ const App: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className={`${cardBase} p-6 flex flex-col items-center justify-center`}>
                 <div className="flex items-center gap-4 mb-2">
-                  <button onClick={() => currentMonthIdx === 0 ? (setCurrentMonthIdx(11), setCurrentYear(y => y-1)) : setCurrentMonthIdx(m => m-1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400"><ChevronLeft size={20}/></button>
+                  <button onClick={() => currentMonthIdx === 0 ? (setCurrentMonthIdx(11), setCurrentYear(y => y - 1)) : setCurrentMonthIdx(m => m - 1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400"><ChevronLeft size={20} /></button>
                   <span className="text-sm font-bold uppercase tracking-wider">{MONTHS[currentMonthIdx]} {currentYear}</span>
-                  <button onClick={() => currentMonthIdx === 11 ? (setCurrentMonthIdx(0), setCurrentYear(y => y+1)) : setCurrentMonthIdx(m => m+1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400"><ChevronRight size={20}/></button>
+                  <button onClick={() => currentMonthIdx === 11 ? (setCurrentMonthIdx(0), setCurrentYear(y => y + 1)) : setCurrentMonthIdx(m => m + 1)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-400"><ChevronRight size={20} /></button>
                 </div>
                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Temporal Vector</div>
               </div>
@@ -303,11 +328,11 @@ const App: React.FC = () => {
                   <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">Daily Objective Matrix</h3>
                   {isAdding ? (
                     <div className="flex items-center gap-2 p-1 pl-3 rounded-xl border bg-white dark:bg-slate-800 dark:border-slate-700 animate-in fade-in zoom-in duration-200">
-                      <input 
-                        type="text" placeholder="Objective..." 
-                        value={newHabitName} onChange={e => setNewHabitName(e.target.value)} 
+                      <input
+                        type="text" placeholder="Objective..."
+                        value={newHabitName} onChange={e => setNewHabitName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && handleAddHabit()}
-                        className="bg-transparent text-[10px] font-bold uppercase outline-none w-32" autoFocus 
+                        className="bg-transparent text-[10px] font-bold uppercase outline-none w-32" autoFocus
                       />
                       <button onClick={handleAddHabit} className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-lg"><Check size={16} /></button>
                       <button onClick={() => setIsAdding(false)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"><X size={16} /></button>
@@ -328,7 +353,7 @@ const App: React.FC = () => {
                         </th>
                         {Array.from({ length: daysInMonth }, (_, i) => (
                           <th key={i} className={`p-2 border-b min-w-[45px] text-center border-slate-200/50 dark:border-slate-800/50`}>
-                            <div className="text-[8px] font-bold text-slate-400 uppercase mb-0.5">{DAYS_OF_WEEK[new Date(currentYear, currentMonthIdx, i+1).getDay()].substring(0, 3)}</div>
+                            <div className="text-[8px] font-bold text-slate-400 uppercase mb-0.5">{DAYS_OF_WEEK[new Date(currentYear, currentMonthIdx, i + 1).getDay()].substring(0, 3)}</div>
                             <div className="text-xs font-bold text-slate-600 dark:text-slate-400">{i + 1}</div>
                           </th>
                         ))}
@@ -353,8 +378,8 @@ const App: React.FC = () => {
                                   <div className="flex items-center">
                                     {isConfirming ? (
                                       <div className="flex gap-1 animate-in slide-in-from-right-2">
-                                        <button onClick={() => handleRemoveHabit(habit.id)} className="p-1.5 bg-rose-500 text-white rounded-lg"><Check size={12}/></button>
-                                        <button onClick={() => setConfirmDeleteId(null)} className="p-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg"><X size={12}/></button>
+                                        <button onClick={() => handleRemoveHabit(habit.id)} className="p-1.5 bg-rose-500 text-white rounded-lg"><Check size={12} /></button>
+                                        <button onClick={() => setConfirmDeleteId(null)} className="p-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg"><X size={12} /></button>
                                       </div>
                                     ) : (
                                       <button onClick={() => setConfirmDeleteId(habit.id)} className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-rose-500 rounded-lg transition-all"><Trash2 size={16} /></button>
@@ -430,8 +455,8 @@ const App: React.FC = () => {
                   <AreaChart data={dailyProgressData}>
                     <defs>
                       <linearGradient id="auraGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={aura.color} stopOpacity={0.15}/>
-                        <stop offset="95%" stopColor={aura.color} stopOpacity={0}/>
+                        <stop offset="5%" stopColor={aura.color} stopOpacity={0.15} />
+                        <stop offset="95%" stopColor={aura.color} stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? "#1e293b" : "#f1f5f9"} />
@@ -453,15 +478,15 @@ const App: React.FC = () => {
                 { label: 'Vector Focus', val: currentYear, icon: Calendar, accent: 'bg-slate-900', controls: true },
               ].map((item, i) => (
                 <div key={i} className={`${cardBase} p-8 flex items-center gap-6`}>
-                  <div className={`p-4 rounded-2xl text-white shadow-xl shadow-black/5 ${item.accent}`}><item.icon size={32}/></div>
+                  <div className={`p-4 rounded-2xl text-white shadow-xl shadow-black/5 ${item.accent}`}><item.icon size={32} /></div>
                   <div className="flex-1">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">{item.label}</p>
                     <h3 className="text-4xl font-bold tracking-tighter">{item.val}</h3>
                   </div>
                   {item.controls && (
                     <div className="flex flex-col gap-2">
-                       <button onClick={() => setCurrentYear(y => y - 1)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"><ChevronLeft size={20}/></button>
-                       <button onClick={() => setCurrentYear(y => y + 1)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"><ChevronRight size={20}/></button>
+                      <button onClick={() => setCurrentYear(y => y - 1)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"><ChevronLeft size={20} /></button>
+                      <button onClick={() => setCurrentYear(y => y + 1)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400"><ChevronRight size={20} /></button>
                     </div>
                   )}
                 </div>
